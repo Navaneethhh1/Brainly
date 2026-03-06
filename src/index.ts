@@ -1,11 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config(); 
-import express from "express";
+import express, { response } from "express";
 
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
-import { userModel } from "./db";
+import { contentModel, userModel } from "./db";
+import { userMiddleware } from "./middleware";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -65,14 +66,61 @@ app.post("/api/v1/signin" , async (req , res) => {
 
     
 })
-app.post("/api/v1/content" , (req , res) => {
+app.post("/api/v1/content" ,  userMiddleware, async (req , res) => {
+
+    const link = req.body.link;
+    const type = req.body.type;
+
+
+    await contentModel.create({
+            link,
+            
+            // @ts-ignore
+            type,
+            // @ts-ignore
+            userId: req.userId,
+            tags : []
+    })
+
+    return res.json({
+        message : "Content created"
+
+    })
 
 })
-app.get("/api/v1/content" , (req , res) => {
+app.get("/api/v1/content" , userMiddleware, async (req , res) => {
+    // @ts-ignore
+    const userId = req.userId;
+    const content = await contentModel.find({
+        userId : userId
+    }).populate("userId", "username");
+    res.json({
+        content
+    })
 
 })
-app.delete("/api/v1/content", (req,res) =>{
-    
+app.delete("/api/v1/content", async (req,res) =>{
+    const contentId = req.body.contentId;
+
+    await contentModel.deleteMany({
+        contentId ,
+        userId : req.userId
+    })
+
+    response.json({
+        message : "Delted the content"
+    })
 })
+
+app.post("/api/v1/brain/share", (req,res) =>{
+
+})
+app.post("/api/v1/brain/:shareLink", (req,res) =>{
+
+})
+
+
+
+
 
 app.listen(3000);
